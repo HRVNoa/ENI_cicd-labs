@@ -27,4 +27,22 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
       - run: pip install -r requirements-dev.txt
-      - run: pytest -n auto -m "unit or api"
+      - run: |
+         pytest -n auto -m "unit or api" \
+          --cov \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-fail-under=85 \
+          --junitxml=reports/junit.xml
+      - name: Write coverage to step summary
+        if: always()
+        run: |
+          coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+      - name: Upload test and coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports-${{ matrix.python-version }}
+          path: |
+            reports/
+            htmlcov/

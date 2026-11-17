@@ -88,3 +88,39 @@ def test_produit_inconnu():
 def test_student15_coupon(subtotal, expected_discount):
     """STUDENT15 offre -15% sans minimum d'achat."""
     assert coupon_discount(subtotal, "STUDENT15") == expected_discount
+
+
+# Couverture complémentaire
+def test_money_bug_rounding(monkeypatch):
+    """Avec MINISHOP_BUG=rounding, l'arrondi bancaire est utilisé (0.125 -> 0.12)."""
+    monkeypatch.setenv("MINISHOP_BUG", "rounding")
+    assert money("0.125") == Decimal("0.12")
+
+
+@pytest.mark.parametrize("coupon", [None, ""])
+def test_coupon_absent(coupon):
+    assert coupon_discount(Decimal("100.00"), coupon) == Decimal("0.00")
+
+
+@pytest.mark.parametrize("coupon", ["welcome10", "  Welcome10  "])
+def test_coupon_casse_et_espaces(coupon):
+    assert coupon_discount(Decimal("20.00"), coupon) == Decimal("2.00")
+
+
+def test_quote_avec_lignes_et_coupon():
+    from minishop.catalog import list_products
+
+    product = list_products()[0]
+    product_id = product.id
+    q = quote([{"product_id": product_id, "qty": 2}], coupon=" freeship ")
+    assert q.coupon == "FREESHIP"
+    assert q.subtotal == money(product.price * 2)
+    assert q.discount == Decimal("0.00")
+    assert q.shipping == Decimal("0.00")
+    assert q.total == q.subtotal
+    d = q.as_dict()
+    assert d["coupon"] == "FREESHIP"
+    assert d["lines"] == [
+        {"product_id": product_id, "qty": 2, "unit_price": str(product.price), "total": str(q.subtotal)}
+    ]
+    assert d["total"] == str(q.total)

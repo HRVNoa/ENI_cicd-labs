@@ -37,11 +37,31 @@ Lisez `ai_tools/prompts/generate_tests.md`. Puis, dans le fichier généré :
 Modifiez le prompt et comparez (gardez un tableau de résultats) :
 | Variante | Nb tests | Tests en échec | Couverture branches | Temps |
 |---|---|---|---|---|
-| Prompt fourni | | | | |
-| Sans le code source (spec seule) | | | | |
-| + exemple de test « parfait » (few-shot) | | | | |
-| Température 0.8 au lieu de 0.2 | | | | |
-| Autre modèle (`LLM_MODEL=...`) | | | | |
+| Prompt fourni | 58 | 0 | 98 % | 50 s |
+| Sans le code source (spec seule) | 22 | 22 — hallucinations d'interface | 50 % (non significatif) | 29 s |
+| + exemple de test « parfait » (few-shot) | 50 | 1 — hallucination (fausse divergence « Produit inconnu ») | 98 % | 34 s |
+| Température 0.2 → `LLM_EFFORT=low` (Anthropic) | 45 | 1 — hallucination (calcul faux : 11 mugs) | 97 % | 26 s |
+| Température 0.8 → `LLM_EFFORT=high` (Anthropic) | — | fichier tronqué, ne compile pas | — | — |
+| Autre modèle (`LLM_MODEL=claude-sonnet-5-5`) | 66 | 0 | 98 % | 40 s |
+
+Mesures : `python ai_tools/bench_prompts.py` (modèle par défaut claude-haiku-5-5, un seul tirage par variante).
+Lors d'un 1er essai à l'étape 3, le prompt fourni avait produit 56 cas dont 1 hallucination (seuil WELCOME10 oublié) :
+les résultats varient d'un tirage à l'autre.
+
+**Analyse :**
+- *Prompt fourni* : 58 cas, tous verts. Le LLM ajoute des cas limites absents de la spec (STUDENT15,
+  quantités non entières, bornes 1/99/100, seuils inclus/exclus).
+- *Spec seule* : sans le code, le modèle devine l'interface et se trompe (paniers en tuples au lieu de
+  `{"product_id", "qty"}`, champ `livraison` au lieu de `shipping`) : tous les tests plantent avant leurs `assert`.
+  La couverture de 50 % ne mesure donc rien. Fournir le code source est indispensable.
+- *Few-shot* : style plus homogène mais moins de tests (50). L'échec vient d'une fausse « DIVERGENCE SPEC/CODE » :
+  le modèle croit que l'erreur « Produit inconnu » n'existe pas, car il ne voit pas `catalog.py` (contexte incomplet).
+- *Effort low* : le plus rapide (26 s), mais moins de tests (45) et une erreur de calcul : pour 11 mugs,
+  il attend 131,25 € au lieu de 137,50 × 0,95 = 130,625 → 130,63 €.
+- *Effort high* : la réponse est coupée en plein milieu d'une fonction (`max_tokens` = 16 000 inclut le
+  raisonnement, épuisé par l'effort élevé) → fichier invalide, rejeté. Plus de réflexion ≠ meilleur résultat.
+- *Sonnet* : le meilleur compromis ici — le plus de tests (66), aucun échec, en 40 s (mais plus cher que Haiku).
+- *Température* : les modèles Claude récents n'acceptent plus `temperature` ; on compare l'effort de raisonnement.
 
 ### 5. Évaluer la qualité des tests générés (30 min)
 La couverture ne suffit pas : un test sans `assert` couvre du code sans rien vérifier.

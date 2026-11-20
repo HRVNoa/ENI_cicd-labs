@@ -18,4 +18,24 @@ def test_page_accueil(page: Page, app_url):
     expect(page.get_by_test_id("products").locator("li")).to_have_count(5)
 
 
-# TODO Atelier 8 : ajouter 2 mugs, appliquer WELCOME10, vérifier le total, commander.
+def test_parcours_achat_welcome10(page: Page, app_url):
+    """2 mugs + WELCOME10 -> total 27.40 € -> commande confirmée."""
+    page.goto(app_url)
+
+    # Ajouter 2 mugs
+    add_mug = page.get_by_test_id("add-mug")
+    add_mug.click()
+    add_mug.click()
+    expect(page.get_by_test_id("cart-mug")).to_have_text(re.compile(r"× 2$"))
+
+    # Appliquer le coupon et calculer le total
+    page.get_by_test_id("coupon").fill("WELCOME10")
+    page.get_by_role("button", name="Calculer le total").click()
+    expect(page.get_by_test_id("subtotal")).to_have_text("25.00")
+    expect(page.get_by_test_id("discount")).to_have_text("2.50")
+    expect(page.get_by_test_id("shipping")).to_have_text("4.90")
+    expect(page.get_by_test_id("total")).to_have_text("27.40")
+
+    # Commander
+    page.get_by_role("button", name="Commander").click()
+    expect(page.get_by_test_id("confirmation")).to_have_text(re.compile(r"^Commande .+ confirmée$"))

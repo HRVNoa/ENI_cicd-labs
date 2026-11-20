@@ -16,10 +16,10 @@ qu'apporte la « Visual AI » par rapport au diff de pixels, et évaluer les out
 2. Provoquez des régressions et observez `tests/visual/diff/*.png` :
    | Changement dans `minishop/static/style.css` | Détecté ? | % pixels | SSIM |
    |---|---|---|---|
-   | `--accent: #2563eb` (bleu au lieu de vert) | | | |
-   | `padding: 12px` → `padding: 14px` sur `#products li` | | | |
-   | Police : `font-family: Georgia, serif` | | | |
-   | Bouton « Ajouter » masqué (`display:none`) | | | |
+   | `--accent: #2563eb` (bleu au lieu de vert) | Oui| 1.953%| 1|
+   | `padding: 12px` → `padding: 14px` sur `#products li` | Oui| 2.369| 0.923 |
+   | Police : `font-family: Georgia, serif` | Oui| 3.307 - 5.982| 0.835|
+   | Bouton « Ajouter » masqué (`display:none`) | Non mais ça plante| | |
 3. Lisez `ai_tools/visual_diff.py`. Pourquoi le **SSIM** (calculé ici en niveaux de gris) rate-t-il
    le changement de couleur ? Proposez une correction (SSIM par canal, ou ΔE dans l'espace Lab).
 4. **Le problème des baselines** : générez-les sur votre poste, poussez, lancez en CI → échec. Pourquoi ?

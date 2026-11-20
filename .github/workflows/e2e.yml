@@ -1,0 +1,52 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false # un échec sur firefox ne doit pas annuler chromium (et inversement)
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Install ${{ matrix.browser }}
+        run: python -m playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Start MiniShop in background
+        run: |
+          nohup uvicorn minishop.api:app --port 8000 > uvicorn.log 2>&1 &
+          timeout 30 bash -c 'until curl -sf localhost:8000/health; do sleep 1; done'
+
+      - name: Run E2E tests
+        run: |
+          pytest -m e2e \
+            --browser ${{ matrix.browser }} \
+            --tracing retain-on-failure \
+            --video retain-on-failure \
+            --screenshot only-on-failure \
+            --output test-results
+
+      - name: Upload traces and videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.browser }}
+          path: |
+            test-results/
+            uvicorn.log
+          retention-days: 7

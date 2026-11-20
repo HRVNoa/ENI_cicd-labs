@@ -19,6 +19,7 @@ Usage :
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -28,7 +29,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from ai_tools.llm import LLMError, chat, extract_code, is_offline, provider  # noqa: E402
 
-PROMPT_FILE = Path(__file__).parent / "prompts" / "generate_tests.md"
+# Surchargeable pour comparer des variantes de prompt (Atelier 3, étape 4)
+PROMPT_FILE = Path(os.getenv("GEN_PROMPT_FILE", Path(__file__).parent / "prompts" / "generate_tests.md"))
 
 FIELDS = {"sous-total": "subtotal", "remise": "discount", "livraison": "shipping", "total": "total"}
 
